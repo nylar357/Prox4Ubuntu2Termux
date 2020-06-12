@@ -1,0 +1,192 @@
+API Reference
+Broker
+class proxybroker.api.Broker(queue=None, timeout=8, max_conn=200, max_tries=3, judges=None, providers=None, verify_ssl=False, loop=None, **kwargs)[source]
+The Broker.
+
+One broker to rule them all, one broker to find them,
+One broker to bring them all and in the darkness bind them.
+Parameters:	
+queue (asyncio.Queue) – (optional) Queue of found/checked proxies
+timeout (int) – (optional) Timeout of a request in seconds
+max_conn (int) – (optional) The maximum number of concurrent checks of proxies
+max_tries (int) – (optional) The maximum number of attempts to check a proxy
+judges (list) – (optional) Urls of pages that show HTTP headers and IP address. Or Judge objects
+providers (list) – (optional) Urls of pages where to find proxies. Or Provider objects
+verify_ssl (bool) – (optional) Flag indicating whether to check the SSL certificates. Set to True to check ssl certifications
+loop – (optional) asyncio compatible event loop
+Deprecated since version 0.2.0: Use max_conn and max_tries instead of max_concurrent_conn and attempts_conn.
+
+find(*, types=None, data=None, countries=None, post=False, strict=False, dnsbl=None, limit=0, **kwargs)[source]
+Gather and check proxies from providers or from a passed data.
+
+Example of usage.
+
+Parameters:	
+types (list) – Types (protocols) that need to be check on support by proxy. Supported: HTTP, HTTPS, SOCKS4, SOCKS5, CONNECT:80, CONNECT:25 And levels of anonymity (HTTP only): Transparent, Anonymous, High
+data – (optional) String or list with proxies. Also can be a file-like object supports read() method. Used instead of providers
+countries (list) – (optional) List of ISO country codes where should be located proxies
+post (bool) – (optional) Flag indicating use POST instead of GET for requests when checking proxies
+strict (bool) – (optional) Flag indicating that anonymity levels of types (protocols) supported by a proxy must be equal to the requested types and levels of anonymity. By default, strict mode is off and for a successful check is enough to satisfy any one of the requested types
+dnsbl (list) – (optional) Spam databases for proxy checking. Wiki
+limit (int) – (optional) The maximum number of proxies
+Raises:	
+ValueError – If types not given.
+
+Changed in version 0.2.0: Added: post, strict, dnsbl. Changed: types is required.
+
+grab(*, countries=None, limit=0)[source]
+Gather proxies from the providers without checking.
+
+Parameters:	
+countries (list) – (optional) List of ISO country codes where should be located proxies
+limit (int) – (optional) The maximum number of proxies
+Example of usage.
+
+serve(host='127.0.0.1', port=8888, limit=100, **kwargs)[source]
+Start a local proxy server.
+
+The server distributes incoming requests to a pool of found proxies.
+
+When the server receives an incoming request, it chooses the optimal proxy (based on the percentage of errors and average response time) and passes to it the incoming request.
+
+In addition to the parameters listed below are also accept all the parameters of the find() method and passed it to gather proxies to a pool.
+
+Example of usage.
+
+Parameters:	
+host (str) – (optional) Host of local proxy server
+port (int) – (optional) Port of local proxy server
+limit (int) – (optional) When will be found a requested number of working proxies, checking of new proxies will be lazily paused. Checking will be resumed if all the found proxies will be discarded in the process of working with them (see max_error_rate, max_resp_time). And will continue until it finds one working proxy and paused again. The default value is 100
+max_tries (int) – (optional) The maximum number of attempts to handle an incoming request. If not specified, it will use the value specified during the creation of the Broker object. Attempts can be made with different proxies. The default value is 3
+min_req_proxy (int) – (optional) The minimum number of processed requests to estimate the quality of proxy (in accordance with max_error_rate and max_resp_time). The default value is 5
+max_error_rate (int) – (optional) The maximum percentage of requests that ended with an error. For example: 0.5 = 50%. If proxy.error_rate exceeds this value, proxy will be removed from the pool. The default value is 0.5
+max_resp_time (int) – (optional) The maximum response time in seconds. If proxy.avg_resp_time exceeds this value, proxy will be removed from the pool. The default value is 8
+prefer_connect (bool) – (optional) Flag that indicates whether to use the CONNECT method if possible. For example: If is set to True and a proxy supports HTTP proto (GET or POST requests) and CONNECT method, the server will try to use CONNECT method and only after that send the original request. The default value is False
+http_allowed_codes (list) – (optional) Acceptable HTTP codes returned by proxy on requests. If a proxy return code, not included in this list, it will be considered as a proxy error, not a wrong/unavailable address. For example, if a proxy will return a 404 Not Found response - this will be considered as an error of a proxy. Checks only for HTTP protocol, HTTPS not supported at the moment. By default the list is empty and the response code is not verified
+backlog (int) – (optional) The maximum number of queued connections passed to listen. The default value is 100
+Raises:	
+ValueError – If limit is less than or equal to zero. Because a parsing of providers will be endless
+
+New in version 0.2.0.
+
+show_stats(verbose=False, **kwargs)[source]
+Show statistics on the found proxies.
+
+Useful for debugging, but you can also use if you’re interested.
+
+Parameters:	verbose – Flag indicating whether to print verbose stats
+Deprecated since version 0.2.0: Use verbose instead of full.
+
+stop()[source]
+Stop all tasks, and the local proxy server if it’s running.
+
+Proxy
+class proxybroker.proxy.Proxy(host=None, port=None, types=(), timeout=8, verify_ssl=False)[source]
+Proxy.
+
+Parameters:	
+host (str) – IP address of the proxy
+port (int) – Port of the proxy
+types (tuple) – (optional) List of types (protocols) which may be supported by the proxy and which can be checked to work with the proxy
+timeout (int) – (optional) Timeout of a connection and receive a response in seconds
+verify_ssl (bool) – (optional) Flag indicating whether to check the SSL certificates. Set to True to check ssl certifications
+Raises:	
+ValueError – If the host not is IP address, or if the port > 65535
+
+classmethod create(host, *args, **kwargs)[source]
+Asynchronously create a Proxy object.
+
+Parameters:	
+host (str) – A passed host can be a domain or IP address. If the host is a domain, try to resolve it
+*args (str) – (optional) Positional arguments that Proxy takes
+**kwargs (str) – (optional) Keyword arguments that Proxy takes
+Returns:	
+Proxy object
+
+Return type:	
+proxybroker.Proxy
+
+Raises:	
+ResolveError – If could not resolve the host
+ValueError – If the port > 65535
+get_log()[source]
+Proxy log.
+
+Returns:	The proxy log in format: (negotaitor, msg, runtime)
+Return type:	tuple
+New in version 0.2.0.
+
+avg_resp_time
+The average connection/response time.
+
+Return type:	float
+error_rate
+Error rate: from 0 to 1.
+
+For example: 0.7 = 70% requests ends with error.
+
+Return type:	float
+New in version 0.2.0.
+
+geo
+Geo information about IP address of the proxy.
+
+Returns:	
+Named tuple with fields:
+code - ISO country code
+name - Full name of country
+Return type:	collections.namedtuple
+Changed in version 0.2.0: In previous versions return a dictionary, now named tuple.
+
+is_working
+True if the proxy is working, False otherwise.
+
+Return type:	bool
+types
+Types (protocols) supported by the proxy.
+
+Where key is type, value is level of anonymity (only for HTTP, for other types level always is None).
+Available types: HTTP, HTTPS, SOCKS4, SOCKS5, CONNECT:80, CONNECT:25
+Available levels: Transparent, Anonymous, High.
+Return type:	dict
+Provider
+class proxybroker.providers.Provider(url=None, proto=(), max_conn=4, max_tries=3, timeout=20, loop=None)[source]
+Proxy provider.
+
+Provider - a website that publish free public proxy lists.
+
+Parameters:	
+url (str) – Url of page where to find proxies
+proto (tuple) – (optional) List of the types (protocols) that may be supported by proxies returned by the provider. Then used as Proxy.types
+max_conn (int) – (optional) The maximum number of concurrent connections on the provider
+max_tries (int) – (optional) The maximum number of attempts to receive response
+timeout (int) – (optional) Timeout of a request in seconds
+get_proxies()[source]
+Receive proxies from the provider and return them.
+
+Returns:	proxies
+proxies
+Return all found proxies.
+
+Returns:	Set of tuples with proxy hosts, ports and types (protocols) that may be supported (from proto).
+For example:
+{(‘192.168.0.1’, ‘80’, (‘HTTP’, ‘HTTPS’), …)}
+Return type:	set
+Logo
+
+Proxy: find>check>serve
+
+
+
+Navigation
+API Reference
+Broker
+Proxy
+Provider
+Examples
+Change Log
+Quick search
+
+Beat Triplebyte's online coding quiz. Get offers from top companies. Skip resumes & recruiters.
+Sponsored · Ads served ethically
+©Copyright 2015-2016 Constverum. | Powered by Sphinx 1.6.3 & Alabaster 0.7.10 | Page source
